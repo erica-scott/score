@@ -1,0 +1,94 @@
+import urllib.request
+import urllib.parse
+import re
+import time
+
+today = time.strftime("%A %B %d, %Y")
+time_now = time.strftime("%I:%M %p")
+
+day = time.strftime("\%d")
+month = time.strftime("%m")
+year = time.strftime("%Y")
+focus_team = "VAN"
+my_team = "Vancouver"
+
+url = 'http://www.nhl.com/ice/schedulebyday.htm?date=' + month + '\%2F' + day + '\%2F' + year + '&team=' + focus_team
+values = {'s':'basics','submit':'search'}
+data = urllib.parse.urlencode(values)
+data = data.encode('utf-8')
+req = urllib.request.Request(url, data)
+resp = urllib.request.urlopen(req)
+respData = resp.read()
+
+date = re.findall(r'<div class="contentBlock"><h3>(.*?)\\n',str(respData))
+
+for eachDate in date:
+	eachDate = eachDate.strip()
+	if eachDate != "":
+		date = eachDate
+		
+teams = re.findall(r'teamName(.*?)</div>',str(respData))
+
+for eachT in teams:
+	teams_playing = re.findall(r'>(.*?)<', str(eachT))
+	for eachTeam in teams_playing:
+		eachTeam = eachTeam.strip()
+		if eachTeam != "":
+			if eachTeam == "Vancouver":
+				my_team = eachTeam
+			else:
+				other_team = eachTeam
+		
+times = re.findall(r'skedStartTimeEST(.*?)</div>',str(respData))
+
+for eachT in times:
+	et_time = re.findall(r'>(.*?)ET', str(eachT))
+	for eachTime in et_time:
+		if eachTime != "":
+			time = eachTime
+	
+url = 'http://www.nhl.com/ice/scores.htm?navid=nav-scr-gc#'
+values = {'s':'basics','submit':'search'}
+data = urllib.parse.urlencode(values)
+data = data.encode('utf-8')
+req = urllib.request.Request(url, data)
+resp = urllib.request.urlopen(req)
+respData = resp.read()
+
+scores_1 = re.findall(r'sbGame(.*?)</table>',str(respData))
+
+total_score_list = []
+current_game_teams = []
+
+for eachS in scores_1:
+	scores_2 = re.findall(r'team left(.*?)</tr>',str(eachS))
+	for eachGame in scores_2:
+		details = re.findall(r';">(.*?)</a>',str(eachGame))
+		for eachDetail in details:
+			if eachDetail != "" and eachDetail == my_team or eachDetail == other_team:
+				current_game_teams.append(eachDetail)
+				total_score = re.findall(r'total">(.*?)</td>',str(eachGame))
+				for eachTotalScore in total_score:
+					total_score_list.append(eachTotalScore)
+				
+
+print("Next Game: " + date + " at " + time)
+print(my_team + " vs " + other_team)
+
+if today == date:
+	print("Game Day!")
+	if time_now >= time:
+		print("Game has started!")
+
+i = 0
+for test_team in current_game_teams:
+	if test_team == my_team or test_team == other_team:
+		i = i + 1
+
+if i == 2:
+	print(current_game_teams[0] + " - " + total_score_list[0])
+	print(current_game_teams[1] + " - " + total_score_list[1])
+	
+
+
+	
